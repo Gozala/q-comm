@@ -1,52 +1,79 @@
 'use strict'
 
-var EventEmitter = require("events").EventEmitter;
-var enqueue = require("event-queue").enqueue;
-var comm = require("q-comm");
-var Queue = require("q/queue").Queue;
-var Q = require("q");
+var utils = require('q-comm/utils');
 
-
-function defineSend(source, target) {
-  source.send = function send(address, message) {
-    enqueue(target.emit.bind(target, address, message))
-  }
+exports['test function'] = function (assert) {
+  assert.ok(utils.isFunction(function(){}), 'value is function');
+  assert.ok(utils.isFunction(Object), 'Object is function');
+  assert.ok(utils.isFunction(new Function('')), 'Genertaed value is function');
+  assert.ok(!utils.isFunction({}), 'object is not a function');
+  assert.ok(!utils.isFunction(4), 'number is not a function');
 }
 
-exports.Channel = function Channel() {
-  var a = Object.create(EventEmitter.prototype);
-  var b = Object.create(EventEmitter.prototype);
-  defineSend(a, b);
-  defineSend(b, a);
-  return { a: a, b: b };
-};
-
-exports.Connection = function Connection(port, id) {
-  var address = "channel#" + id;
-  var queue = Queue();
-  var closed = Q.defer();
-  port.on(address, queue.put);
-  return {
-    get: queue.get,
-    put: port.send.bind(port, address),
-    close: closed.resolve,
-    closed: closed.promise
-  };
-};
-
-exports.Peer = function Peer(port, id, object) {
-  return comm.Peer(exports.Connection(port, id), object);
-};
-
-exports.createPeers = function createPeers (object) {
-  var address = (new Date()).getTime();
-  var channel = exports.Channel();
-  var local = Q.def(object);
-  var remote = exports.Peer(channel.b, address);
-  exports.Peer(channel.a, address, local);
-  return {
-    object: object,
-    local: local,
-    remote: remote
-  };
+exports['test atoms'] = function (assert) {
+  assert.ok(utils.isAtom(2), 'number is atom');
+  assert.ok(utils.isAtom(NaN), '`NaN` is atom');
+  assert.ok(utils.isAtom(undefined), '`undefined` is atom');
+  assert.ok(utils.isAtom(null), '`null` is atom');
+  assert.ok(utils.isAtom(Infinity), '`Infinity` is atom');
+  assert.ok(utils.isAtom('foo'), 'strings are atoms');
+  assert.ok(utils.isAtom(true) && utils.isAtom(false), 'booleans are atoms');
 }
+
+exports['test object'] = function (assert) {
+  assert.ok(utils.isObject({}), '`{}` is object');
+  assert.ok(!utils.isObject(null), '`null` is not an object');
+  assert.ok(!utils.isObject(Object), 'functions is not an object');
+}
+
+exports['test plain objects'] = function (assert) {
+  assert.ok(utils.isPlainObject({}), '`{}` is a plain object');
+  assert.ok(!utils.isPlainObject([]), '`[]` is not a plain object');
+  assert.ok(!utils.isPlainObject(new function() {}), 'derived objects are not plain');
+}
+
+exports['test json atoms'] = function (assert) {
+  assert.ok(utils.isJSON(null), '`null` is JSON');
+  assert.ok(utils.isJSON(undefined), '`undefined` is JSON');
+  assert.ok(utils.isJSON(NaN), '`NaN` is JSON');
+  assert.ok(utils.isJSON(Infinity), '`Infinity` is JSON');
+  assert.ok(utils.isJSON(true) && utils.isJSON(false), 'booleans are JSON');
+  assert.ok(utils.isJSON(4), utils.isJSON(0), 'numbers are JSON');
+  assert.ok(utils.isJSON("foo bar"), "strings are JSON");
+}
+
+exports['test json'] = function (assert) {
+  assert.ok(!utils.isJSON(function(){}), 'functions are not json');
+  assert.ok(utils.isJSON({}), '`{}` is JSON');
+  assert.ok(utils.isJSON({
+              a: 'foo',
+              b: 3,
+              c: undefined,
+              d: null,
+              e: {
+                f: {
+                  g: 'bar',
+                  p: [{}, 'oueou', 56]
+                },
+                q: { nan: NaN, infinity: Infinity },
+                'non standard name': 'still works'
+              }
+            }), 'JSON can contain nested objects');
+
+  var foo = {};
+  var bar = { foo: foo }
+  foo.bar = bar;
+  assert.ok(!utils.isJSON(foo), 'recursive objects are not json');
+
+
+  assert.ok(!utils.isJSON({ get foo() { return 5 } }),
+            'json can not have getter');
+
+  assert.ok(!utils.isJSON({ foo: 'bar', baz: function () {} }),
+            'json can not contain functions');
+
+  assert.ok(!utils.isJSON(Object.create({})),
+            'json must be direct decedant of `Object.prototype`');
+}
+
+if (module == require.main) require('test').run(exports)

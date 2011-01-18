@@ -28,7 +28,8 @@
             "modules": {
                 "webworker": "./lib/q-comm/webworker",
                 "messages": "./lib/q-comm/messages",
-                "socket.io-server": "./lib/q-comm/socket.io-server"
+                "socket.io-server": "./lib/q-comm/socket.io-server",
+                "utils": "./lib/utils"
             },
             "dependencies": {
                 "q": ">=0.2.5",

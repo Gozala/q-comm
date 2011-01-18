@@ -1,6 +1,6 @@
 'use strict'
 
-var utils = require('./utils');
+var utils = require('./fixtures');
 var Q = require('q')
 
 exports['test echo'] = function (assert, done) {
